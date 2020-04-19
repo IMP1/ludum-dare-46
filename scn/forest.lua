@@ -14,6 +14,22 @@ setmetatable(Scene, BaseScene)
 Scene.__index = Scene
 
 local CAMERA_SNAP = 3
+local SOUNDS = {
+    hit_ground = love.audio.newSource("sfx/floof.ogg", "static")
+}
+
+local BACKGROUND = love.graphics.newImage("gfx/bg1.png")
+local BACKGROUND_LOOP = love.graphics.newQuad(0, 0, 1920, BACKGROUND:getHeight(), BACKGROUND:getWidth(), BACKGROUND:getHeight())
+local SHADOW_MASK = love.graphics.newShader([[
+    vec4 effect(vec4 colour, Image texture, vec2 texture_coords, vec2 screen_coords)
+    {
+        if (Texel(texture, texture_coords).a == 0)
+        {
+            discard;
+        }
+        return vec4(1.0);
+    }
+]])
 
 function Scene.new()
     local self = BaseScene.new("Forest")
@@ -28,15 +44,6 @@ function Scene:load()
     -- self.camera:setBounds(0, 0, 10000, 240)
 
     self.parallax_manager = ParallaxManager.new(10)
-    self.parallax_manager:add_layer(love.graphics.newImage("gfx/bg1.png"), {
-        y        = 0,
-        oy       = 320,
-        z_index  = 0,
-        repeat_x = true,
-        pad_y    = true,
-        movement = 0,
-        width    = 1920,
-    })
     -- TODO: Add background layers
     self.parallax_manager:add_layer(love.graphics.newImage("gfx/midground.png"), {
         y        = 0,
@@ -111,7 +118,16 @@ end
 
 function Scene:update(dt, mx, my)
     self.player:update(dt)
-    -- TODO: HANDLE GOING TOO HIGH AND TOO LOW
+    if self.player.position.y > -30 and self.player.velocity.y > 0 then
+        SOUNDS.hit_ground:play()
+        self.player.position.y = math.min(self.player.position.y, -29)
+        self.player.velocity.y = -self.player.velocity.y
+        local speed = self.player.velocity:magnitude()
+        self.player.velocity = self.player.velocity:normalise() * speed * 0.2
+    end
+    if self.player.position.y < -350 and self.player.velocity.y < 0 then
+        self.player.velocity.y = -self.player.velocity.y * 0.1
+    end
     local x, y = unpack(self.player.position.data)
     if self.player.roosting then
         local cam_x, cam_y = self.camera:getCentre()
@@ -126,14 +142,46 @@ end
 function Scene:draw()
     love.graphics.setColor(1, 1, 1)
     self.camera:set()
+    love.graphics.draw(BACKGROUND, BACKGROUND_LOOP, 0, 0, 0, 1, 1, 0, 320)
+    -- self.parallax_manager:add_layer(BACKGROUND, {
+        -- y        = 0,
+        -- oy       = 320,
+        -- z_index  = 0,
+        -- repeat_x = true,
+        -- pad_y    = true,
+        -- movement = 0,
+        -- width    = 1920,
+    -- })
     self.parallax_manager:drawBackground()
     for _, animal in pairs(self.fauna) do
         animal:draw()
     end
+    if self.player.position.y > -100 then
+        -- draw player shadow 
+        local dist = (self.player.position.y + 100) / 70
+        local x = self.player.position.x
+        local y = self.player.position.y
+        local opacity = 0.5 * dist
+        local size = 11 / dist
+        love.graphics.stencil(function() 
+            love.graphics.setShader(SHADOW_MASK)
+            self.parallax_manager:drawBackground()
+            love.graphics.setShader()
+        end, "replace", 1)
+        love.graphics.setColor(0, 0, 0, opacity)
+        love.graphics.setStencilTest("greater", 0)
+        love.graphics.ellipse("fill", x, -30, size, size / 3)
+        love.graphics.setStencilTest()
+    end
+    love.graphics.setColor(1, 1, 1)
     self.player:draw()
     self.parallax_manager:drawForeground()
-    -- if DEBUG then
-        -- love.graphics.setColor(1, 1, 1)
+    if DEBUG then
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.push()
+        love.graphics.origin()
+        love.graphics.print(tostring(self.player.position), 0, 0)
+        love.graphics.pop()
         -- love.graphics.line(0, 0, self.player.position.x, self.player.position.y)
         -- love.graphics.circle("fill", self.player.position.x, self.player.position.y, 3)
         -- love.graphics.setColor(1, 0, 0)
@@ -142,7 +190,7 @@ function Scene:draw()
         -- for _, obj in pairs(self.hiding_spots) do
             -- love.graphics.circle("fill", obj.position.x, obj.position.y, 2)
         -- end
-    -- end
+    end
     self.camera:unset()
 end
 

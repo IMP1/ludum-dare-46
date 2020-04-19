@@ -21,7 +21,7 @@ function Camera.new()
 end
 
 function Camera:set()
-    love.graphics.setCanvas(self.viewport)
+    love.graphics.setCanvas({self.viewport, stencil=true})
     love.graphics.setColor(1, 1, 1)
     love.graphics.clear()
     love.graphics.setBlendMode("alpha")
