@@ -41,7 +41,7 @@ function Scene:load()
     love.graphics.setBackgroundColor(34/255,32/255,52/255)
     self.camera = Camera.new()
     self.camera:scale(4)
-    -- self.camera:setBounds(0, 0, 10000, 240)
+    self.camera:setBounds(-50, -500, 1800, -160)
 
     self.parallax_manager = ParallaxManager.new(10)
     -- TODO: Add background layers
@@ -53,7 +53,15 @@ function Scene:load()
         movement = 1,
         tint     = {0.7, 0.8, 1},
     })
+
+    -- TODO: 
+    -- Try out moving mid layer slighly lower into middle of green?
+    -- Does it look too wierd having logs and rocks there?
+
     -- TODO: Add foreground layer
+    -- TODO: Make rudimentary shadow sprite that is roughly the sillhouette of the bird
+    -- TODO: Implement rat AI and add some rats
+    -- TODO: Add swooping graphic
 
     self.nest = {898, -139, 9, 6}
     self.roost_spot = {self.nest[1] + 10, self.nest[2] - 2}
@@ -128,6 +136,7 @@ function Scene:update(dt, mx, my)
     if self.player.position.y < -350 and self.player.velocity.y < 0 then
         self.player.velocity.y = -self.player.velocity.y * 0.1
     end
+    -- TODO: Have player turn round on either end of map
     local x, y = unpack(self.player.position.data)
     if self.player.roosting then
         local cam_x, cam_y = self.camera:getCentre()
@@ -142,16 +151,8 @@ end
 function Scene:draw()
     love.graphics.setColor(1, 1, 1)
     self.camera:set()
+    BACKGROUND:setWrap("repeat", "clamp")
     love.graphics.draw(BACKGROUND, BACKGROUND_LOOP, 0, 0, 0, 1, 1, 0, 320)
-    -- self.parallax_manager:add_layer(BACKGROUND, {
-        -- y        = 0,
-        -- oy       = 320,
-        -- z_index  = 0,
-        -- repeat_x = true,
-        -- pad_y    = true,
-        -- movement = 0,
-        -- width    = 1920,
-    -- })
     self.parallax_manager:drawBackground()
     for _, animal in pairs(self.fauna) do
         animal:draw()

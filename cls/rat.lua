@@ -24,11 +24,11 @@ function rat.new(x, y)
 end
 
 function rat:update(dt, player)
-    -- TODO: if player is near then listen
-    -- TODO: if player is nearer and flying then run!
     if self.fleeing then
         -- TODO: move! (take into account ground height variation?)
     end
+    -- TODO: if player is detected (near and flying) then run!
+    -- TODO: if player is near then listen
     if self.grazing then
         self.timer = self.timer - dt
         if self.timer <= 0 then

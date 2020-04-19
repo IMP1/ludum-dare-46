@@ -35,8 +35,6 @@ end
 
 function Player:update_movement(dt)
     if self.roosting then return end
-    -- TODO: Rework movement. Player shouldn't be able to go straight up or straight down.
-    -- Treat vertical and horizontal movement separately
     local impulse = vec2.new(0, 0)
     if love.keyboard.isDown(controls.move_up) then
         impulse.y = impulse.y - 64
