@@ -7,11 +7,13 @@ local MIN_SPEED    = 32  -- pixels / second
 local MAX_SPEED    = 192 -- pixels / second
 local SWOOP_SPEED  = 256 -- pixels / second
 
-local SPRITES = {
-    straight = love.graphics.newImage("gfx/owl_glide.png"),
-    rise     = love.graphics.newImage("gfx/owl_rise.png"),
-    fall     = love.graphics.newImage("gfx/owl_fall.png"),
-    swoop    = love.graphics.newImage("gfx/owl_fall.png"),
+local IMAGE = love.graphics.newImage("gfx/owl_spritesheet.png")
+
+local QUADS = {
+    fall     = love.graphics.newQuad(42, 177, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
+    straight = love.graphics.newQuad(76, 177, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
+    rise     = love.graphics.newQuad(108, 177, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
+    swoop    = love.graphics.newQuad(108, 177, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
 }
 
 local Player = {}
@@ -22,7 +24,7 @@ function Player.new(x, y)
     setmetatable(self, Player)
     self.position = vec2.new(x, y)
     self.velocity = vec2.new(192, 0)
-    self.sprite   = SPRITES.straight
+    self.sprite   = QUADS.straight
     self.swooping = false
     self.roosting = false
     return self
@@ -56,13 +58,13 @@ end
 
 function Player:update_sprite(dt)
     if self.swooping then
-        self.sprite = SPRITES.swoop
+        self.sprite = QUADS.swoop
     elseif self.velocity.y > math.abs(self.velocity.x) / 4 then
-        self.sprite = SPRITES.fall
+        self.sprite = QUADS.fall
     elseif self.velocity.y < -math.abs(self.velocity.x) / 4 then
-        self.sprite = SPRITES.rise
+        self.sprite = QUADS.rise
     else
-        self.sprite = SPRITES.straight
+        self.sprite = QUADS.straight
     end
 end
 
@@ -72,13 +74,12 @@ function Player:update(dt)
 end
 
 function Player:draw(dt)
-    local w, h = self.sprite:getDimensions()
+    local w, h = 32, 24
     local flip = 1
     if self.velocity.x < 0 then
         flip = -1
     end
-    love.graphics.circle("fill", self.position[1], self.position[2], 6)
-    love.graphics.draw(self.sprite, self.position[1], self.position[2], 0, flip, 1, w/2, h/2)
+    love.graphics.draw(IMAGE, self.sprite, self.position[1], self.position[2], 0, flip, 1, w/2, h/2)
 end
 
 return Player
