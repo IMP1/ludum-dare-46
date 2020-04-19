@@ -35,6 +35,7 @@ function Camera:unset()
     love.graphics.pop()
     love.graphics.setCanvas()
     love.graphics.setBlendMode("alpha", "premultiplied")
+    love.graphics.setColor(1, 1, 1)
     love.graphics.draw(self.viewport)
 end
 
