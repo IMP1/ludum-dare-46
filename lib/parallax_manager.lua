@@ -14,6 +14,12 @@ function ParallaxManager:add_layer(image, options)
     layer.image   = image
     local wrap_horz = "clampzero"
     local wrap_vert = "clampzero"
+    if options.pad_x then
+        wrap_horz = "clamp"
+    end
+    if options.pad_y then
+        wrap_vert = "clamp"
+    end
     if options.repeat_x then
         wrap_horz = "repeat"
     end
