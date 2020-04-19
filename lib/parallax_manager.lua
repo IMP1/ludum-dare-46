@@ -35,6 +35,7 @@ function ParallaxManager:add_layer(image, options)
     layer.height  = options.height or image:getHeight()
     layer.quad    = love.graphics.newQuad(0, 0, layer.width, layer.height, image:getWidth(), image:getHeight())
     layer.z_index = options.z_index or self.midground_index
+    layer.tint    = options.tint or {1, 1, 1}
 
     local index = (#self.layers + 1)
     for i, l in ipairs(self.layers) do
@@ -50,6 +51,7 @@ function ParallaxManager:drawBackground()
     for _, layer in ipairs(self.layers) do
         if layer.z_index <= self.midground_index then
             local scale = 1
+            love.graphics.setColor(layer.tint)
             love.graphics.draw(layer.image, layer.quad, layer.x, layer.y, 0, scale, scale, layer.ox, layer.oy)
         end
     end
@@ -59,6 +61,7 @@ function ParallaxManager:drawForeground()
     for _, layer in ipairs(self.layers) do
         if layer.z_index > self.midground_index then
             local scale = 1
+            love.graphics.setColor(layer.tint)
             love.graphics.draw(layer.image, layer.quad, layer.x, layer.y, 0, scale, scale, layer.ox, layer.oy)
         end
     end
