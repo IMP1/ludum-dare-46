@@ -18,7 +18,7 @@ function Scene.new()
 end
 
 function Scene:load()
-    self.player = Player.new(-120, -120)
+    love.graphics.setBackgroundColor(34/255,32/255,52/255)
     self.camera = Camera.new()
     self.camera:scale(4)
     -- self.camera:setBounds(0, 0, 10000, 240)
@@ -29,6 +29,7 @@ function Scene:load()
         oy       = 320,
         z_index  = 0,
         repeat_x = true,
+        pad_y    = true,
         movement = 0,
         width    = 1920,
     })
@@ -41,6 +42,7 @@ function Scene:load()
     })
 
     self.nest = {898, -139, 9, 6}
+    self.roost_spot = {self.nest[1] + 10, self.nest[2] - 2}
 
     self.hiding_spots = {
         HidingSpot.new("Hole",  162,  -41, 6, 5),
@@ -56,6 +58,8 @@ function Scene:load()
 
     self.fauna = {}
     table.insert(self.fauna, Rat.new(0, 0))
+
+    self.player = Player.new(self.roost_spot[1], self.roost_spot[2])
 end
 
 function Scene:keyPressed(key, isRepeat)
@@ -74,7 +78,27 @@ function Scene:keyPressed(key, isRepeat)
         if dx ^ 2 + dy ^ 2 < some_arbitrary_distance ^ 2 then
             -- TODO: make player land
             self.player.roosting = true
+            self.player.position.x = self.roost_spot[1]
+            self.player.position.y = self.roost_spot[2]
+            -- TODO: make player switch sprite to standing one
+            -- TODO: make player face left
         end
+    end
+    local taking_off = false
+    for _, c in pairs(controls.move_up) do 
+        if c == key then taking_off = true end
+    end
+    for _, c in pairs(controls.move_left) do 
+        if c == key then taking_off = true end
+    end
+    for _, c in pairs(controls.move_down) do 
+        if c == key then taking_off = true end
+    end
+    for _, c in pairs(controls.move_right) do 
+        if c == key then taking_off = true end
+    end
+    if taking_off then
+        self.player.roosting = false
     end
 end
 
@@ -84,6 +108,7 @@ end
 
 function Scene:update(dt, mx, my)
     self.player:update(dt)
+    -- TODO: HANDLE GOING TOO HIGH AND TOO LOW
     local x, y = unpack(self.player.position.data)
     self.camera:centreOn(x, y)
 end
@@ -99,9 +124,10 @@ function Scene:draw()
     self.player:draw()
     self.parallax_manager:drawForeground()
     if DEBUG then
-        love.graphics.setColor(1, 0, 0)
+        love.graphics.setColor(1, 1, 1)
         love.graphics.line(0, 0, self.player.position.x, self.player.position.y)
         love.graphics.circle("fill", self.player.position.x, self.player.position.y, 3)
+        love.graphics.setColor(1, 0, 0)
         love.graphics.circle("fill", self.nest[1], self.nest[2], 3)
         love.graphics.setColor(1, 0, 1)
         for _, obj in pairs(self.hiding_spots) do
