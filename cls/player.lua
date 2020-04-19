@@ -14,6 +14,8 @@ local QUADS = {
     straight = love.graphics.newQuad(76, 177, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
     rise     = love.graphics.newQuad(108, 177, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
     swoop    = love.graphics.newQuad(108, 177, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
+    roost_1  = love.graphics.newQuad(147, 168, 24, 32, IMAGE:getWidth(), IMAGE:getHeight()),
+    roost_2  = love.graphics.newQuad(180, 175, 32, 24, IMAGE:getWidth(), IMAGE:getHeight()),
 }
 
 local Player = {}
@@ -58,7 +60,9 @@ function Player:update_movement(dt)
 end
 
 function Player:update_sprite(dt)
-    if self.swooping then
+    if self.roosting then
+        self.sprite = QUADS.roost_2
+    elseif self.swooping then
         self.sprite = QUADS.swoop
     elseif self.velocity.y > math.abs(self.velocity.x) / 4 then
         self.sprite = QUADS.fall
@@ -69,13 +73,24 @@ function Player:update_sprite(dt)
     end
 end
 
+function Player:roost(x, y)
+    -- TODO: make player switch sprite to standing one
+    -- TODO: make player face left
+    self.roosting = true
+    self.position.x = x
+    self.position.y = y
+    self.velocity.y = 0
+    self.velocity.x = -0.1
+    self.sprite = QUADS.roost_2
+end
+
 function Player:update(dt)
     self:update_movement(dt)
     self:update_sprite(dt)
 end
 
 function Player:draw(dt)
-    local w, h = 32, 24
+    local _, _, w, h = self.sprite:getViewport()
     local flip = 1
     if self.velocity.x < 0 then
         flip = -1

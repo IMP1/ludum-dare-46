@@ -1,5 +1,7 @@
 local controls = require 'controls'
+local lerp     = require 'lib.lerp'
 
+local Vector          = require 'lib.vector2'
 local ParallaxManager = require 'lib.parallax_manager'
 local Camera          = require 'lib.camera'
 local Player          = require 'cls.player'
@@ -10,6 +12,8 @@ local BaseScene = require 'scn._base'
 local Scene = {}
 setmetatable(Scene, BaseScene)
 Scene.__index = Scene
+
+local CAMERA_SNAP = 3
 
 function Scene.new()
     local self = BaseScene.new("Forest")
@@ -40,6 +44,7 @@ function Scene:load()
         z_index  = 5,
         repeat_x = false,
         movement = 1,
+        tint     = {0.7, 0.8, 1},
     })
     -- TODO: Add foreground layer
 
@@ -61,7 +66,9 @@ function Scene:load()
     self.fauna = {}
     table.insert(self.fauna, Rat.new(0, 0))
 
-    self.player = Player.new(self.roost_spot[1], self.roost_spot[2])
+    self.player = Player.new(0, 0)
+    self.player:roost(self.roost_spot[1], self.roost_spot[2])
+    self.camera:centreOn(self.player.position.x, self.player.position.y)
 end
 
 function Scene:keyPressed(key, isRepeat)
@@ -72,18 +79,12 @@ function Scene:keyPressed(key, isRepeat)
         end
     end
     if landing then
-        print("pressing R")
         local x, y = self.nest[1] + self.nest[3] / 2, self.nest[2] + self.nest[4] / 2
         local dx = x - self.player.position.x
         local dy = y - self.player.position.y
         local some_arbitrary_distance = 128
         if dx ^ 2 + dy ^ 2 < some_arbitrary_distance ^ 2 then
-            -- TODO: make player land
-            self.player.roosting = true
-            self.player.position.x = self.roost_spot[1]
-            self.player.position.y = self.roost_spot[2]
-            -- TODO: make player switch sprite to standing one
-            -- TODO: make player face left
+            self.player:roost(self.roost_spot[1], self.roost_spot[2])
         end
     end
     local taking_off = false
@@ -112,30 +113,36 @@ function Scene:update(dt, mx, my)
     self.player:update(dt)
     -- TODO: HANDLE GOING TOO HIGH AND TOO LOW
     local x, y = unpack(self.player.position.data)
-    self.camera:centreOn(x, y)
+    if self.player.roosting then
+        local cam_x, cam_y = self.camera:getCentre()
+        local cam_vec = self.player.position - Vector.new(cam_x, cam_y)
+        local cam_move = lerp.lerp(Vector.new(0, 0), cam_vec, dt * CAMERA_SNAP, true)
+        self.camera:move(cam_move.x, cam_move.y)
+    else
+        self.camera:centreOn(x, y)
+    end
 end
 
 function Scene:draw()
     love.graphics.setColor(1, 1, 1)
     self.camera:set()
-    love.graphics.setColor(0.8, 0.8, 1)
     self.parallax_manager:drawBackground()
     for _, animal in pairs(self.fauna) do
         animal:draw()
     end
     self.player:draw()
     self.parallax_manager:drawForeground()
-    if DEBUG then
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.line(0, 0, self.player.position.x, self.player.position.y)
-        love.graphics.circle("fill", self.player.position.x, self.player.position.y, 3)
-        love.graphics.setColor(1, 0, 0)
-        love.graphics.circle("fill", self.nest[1], self.nest[2], 3)
-        love.graphics.setColor(1, 0, 1)
-        for _, obj in pairs(self.hiding_spots) do
-            love.graphics.circle("fill", obj.position.x, obj.position.y, 2)
-        end
-    end
+    -- if DEBUG then
+        -- love.graphics.setColor(1, 1, 1)
+        -- love.graphics.line(0, 0, self.player.position.x, self.player.position.y)
+        -- love.graphics.circle("fill", self.player.position.x, self.player.position.y, 3)
+        -- love.graphics.setColor(1, 0, 0)
+        -- love.graphics.circle("fill", self.nest[1], self.nest[2], 3)
+        -- love.graphics.setColor(1, 0, 1)
+        -- for _, obj in pairs(self.hiding_spots) do
+            -- love.graphics.circle("fill", obj.position.x, obj.position.y, 2)
+        -- end
+    -- end
     self.camera:unset()
 end
 
