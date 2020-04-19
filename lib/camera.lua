@@ -81,6 +81,12 @@ function Camera:centreOn(x, y)
     self:setPosition(x - viewWidth / 2, y - viewHeight / 2)
 end
 
+function Camera:getCentre()
+    local viewWidth = love.graphics.getWidth() / self.scaleX
+    local viewHeight = love.graphics.getHeight() / self.scaleY
+    return self.x + viewWidth / 2, self.y + viewHeight / 2
+end
+
 function Camera:setScale(sx, sy)
     sx = sx or 1
     self.scaleX = sx
@@ -100,12 +106,10 @@ function Camera:setBounds(x1, y1, x2, y2)
 end
 
 function Camera:toWorldPosition(screenX, screenY)
-    -- TODO: include rotation
     return (screenX / self.scaleX + self.x), (screenY / self.scaleY + self.y)
 end
 
 function Camera:toScreenPosition(worldX, worldY)
-    -- TODO: include rotation
     return (worldX - self.x) * math.abs(self.scaleX), (worldY - self.y) * self.scaleY
 end
 
