@@ -4,6 +4,8 @@ function T(str)
     return str
 end
 
+DEBUG = true
+
 local PIXEL_SCALE = 1
 local WIDTH, HEIGHT = love.graphics.getWidth(), love.graphics.getHeight()
 local canvas
