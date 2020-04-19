@@ -33,6 +33,7 @@ function Scene:load()
         movement = 0,
         width    = 1920,
     })
+    -- TODO: Add background layers
     self.parallax_manager:add_layer(love.graphics.newImage("gfx/midground.png"), {
         y        = 0,
         oy       = 320,
@@ -40,6 +41,7 @@ function Scene:load()
         repeat_x = false,
         movement = 1,
     })
+    -- TODO: Add foreground layer
 
     self.nest = {898, -139, 9, 6}
     self.roost_spot = {self.nest[1] + 10, self.nest[2] - 2}
