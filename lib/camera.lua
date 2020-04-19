@@ -15,10 +15,16 @@ function Camera.new()
     self.scaleX = 1
     self.scaleY = 1
     self.rotation = 0
+    self.viewport = love.graphics.newCanvas()
+    self.viewport:setFilter("nearest", "nearest")
     return self
 end
 
 function Camera:set()
+    love.graphics.setCanvas(self.viewport)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.clear()
+    love.graphics.setBlendMode("alpha")
     love.graphics.push()
     love.graphics.rotate(-self.rotation)
     love.graphics.scale(self.scaleX, self.scaleY)
@@ -27,6 +33,9 @@ end
 
 function Camera:unset()
     love.graphics.pop()
+    love.graphics.setCanvas()
+    love.graphics.setBlendMode("alpha", "premultiplied")
+    love.graphics.draw(self.viewport)
 end
 
 function Camera:move(dx, dy)

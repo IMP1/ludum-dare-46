@@ -1,10 +1,11 @@
 local ParallaxManager = {}
 ParallaxManager.__index = ParallaxManager
 
-function ParallaxManager.new()
+function ParallaxManager.new(midground_index)
     local self = {}
     setmetatable(self, ParallaxManager)
     self.layers = {}
+    self.midground_index = (midground_index or 0)
     return self
 end
 
@@ -27,7 +28,7 @@ function ParallaxManager:add_layer(image, options)
     layer.width   = options.width or image:getWidth()
     layer.height  = options.height or image:getHeight()
     layer.quad    = love.graphics.newQuad(0, 0, layer.width, layer.height, image:getWidth(), image:getHeight())
-    layer.z_index = options.z_index or 0
+    layer.z_index = options.z_index or self.midground_index
 
     local index = (#self.layers + 1)
     for i, l in ipairs(self.layers) do
@@ -36,21 +37,21 @@ function ParallaxManager:add_layer(image, options)
             break
         end
     end
-    print(index)
     table.insert(self.layers, index, layer)
 end
 
 function ParallaxManager:drawBackground()
     for _, layer in ipairs(self.layers) do
-        if layer.z_index <= 0 then
-            love.graphics.draw(layer.image, layer.quad, layer.x, layer.y)
+        if layer.z_index <= self.midground_index then
+            local scale = 1
+            love.graphics.draw(layer.image, layer.quad, layer.x, layer.y, 0, scale, scale, layer.ox, layer.oy)
         end
     end
 end
 
 function ParallaxManager:drawForeground()
     for _, layer in ipairs(self.layers) do
-        if layer.z_index > 0 then
+        if layer.z_index > self.midground_index then
             local scale = 1
             love.graphics.draw(layer.image, layer.quad, layer.x, layer.y, 0, scale, scale, layer.ox, layer.oy)
         end
