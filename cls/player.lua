@@ -23,10 +23,11 @@ function Player.new(x, y)
     local self = {}
     setmetatable(self, Player)
     self.position = vec2.new(x, y)
-    self.velocity = vec2.new(192, 0)
+    self.velocity = vec2.new(0, 0)
     self.sprite   = QUADS.straight
     self.swooping = false
-    self.roosting = false
+    self.roosting = true
+    self.gliding  = false
     return self
 end
 
