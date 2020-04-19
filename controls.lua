@@ -7,5 +7,6 @@ controls.move_right = {"d"}
 
 controls.move_glide = {"lshift", "rshift"}
 controls.move_swoop = {"space"}
+controls.move_land  = {"r"}
 
 return controls
