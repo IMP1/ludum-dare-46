@@ -49,13 +49,24 @@ end
 
 function ParallaxManager:drawBackground()
     for _, layer in ipairs(self.layers) do
-        if layer.z_index <= self.midground_index then
+        if layer.z_index < self.midground_index then
             local scale = 1
             love.graphics.setColor(layer.tint)
             love.graphics.draw(layer.image, layer.quad, layer.x, layer.y, 0, scale, scale, layer.ox, layer.oy)
         end
     end
 end
+
+function ParallaxManager:drawMidground()
+    for _, layer in ipairs(self.layers) do
+        if layer.z_index == self.midground_index then
+            local scale = 1
+            love.graphics.setColor(layer.tint)
+            love.graphics.draw(layer.image, layer.quad, layer.x, layer.y, 0, scale, scale, layer.ox, layer.oy)
+        end
+    end
+end
+
 
 function ParallaxManager:drawForeground()
     for _, layer in ipairs(self.layers) do
