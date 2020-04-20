@@ -5,6 +5,9 @@ local Vector = require 'lib.vector2'
 local Rat = {}
 Rat.__index = Rat
 
+Rat.SUSPICION_RANGE = 128
+Rat.AWARENESS_RANGE = 96
+
 local IMAGE = love.graphics.newImage("gfx/rat_1.png")
 
 local QUADS = {
@@ -16,9 +19,6 @@ local QUADS = {
 local GRAZE_TIME_PERIOD = {1, 4}
 local LISTEN_TIME_PERIOD = {2, 3}
 local HIDE_TIME_PERIOD = {8, 12}
-local SUSPICION_RANGE = 128
-local AWARENESS_RANGE = 96
-local DETECTION_RANGE = 64
 local MOVE_SPEED = 32
 local FLEE_SPEED = 128
 
@@ -101,8 +101,6 @@ function Rat:flee(player, hiding_spots)
         self.flee_target.x = self.flee_target.x - nearest_spot.size.x * 0.3
     end
     if self.flee_target == nil then
-        print(self.position)
-        print(player.position)
         error("Couldn't find a hiding spot")
     end
 end
@@ -112,7 +110,7 @@ function Rat:update(dt, player, hiding_spots)
         self.hiding_timer = self.hiding_timer - dt
         if self.hiding_timer <= 0 then
             local distance = (self.position - player.position):magnitudeSquared()
-            if distance > AWARENESS_RANGE ^ 2 then
+            if distance > Rat.SUSPICION_RANGE ^ 2 then
                 self.hiding = false
             end
         end
@@ -125,7 +123,7 @@ function Rat:update(dt, player, hiding_spots)
         end
         return
     elseif self.listening then
-        if (player.position - self.position):magnitudeSquared() < AWARENESS_RANGE ^ 2 then
+        if (player.position - self.position):magnitudeSquared() < Rat.AWARENESS_RANGE ^ 2 then
             if player.last_flap == 0 or player.just_hit_ground then
                 self.listening = false
                 self:flee(player, hiding_spots)
@@ -139,12 +137,12 @@ function Rat:update(dt, player, hiding_spots)
         end
         return
     elseif self.moving or self.grazing then
-        if (player.position - self.position):magnitudeSquared() < AWARENESS_RANGE ^ 2 then
+        if (player.position - self.position):magnitudeSquared() < Rat.AWARENESS_RANGE ^ 2 then
             if player.last_flap == 0 or player.just_hit_ground then
                 self:flee(player, hiding_spots)
             end
         end
-        if (player.position - self.position):magnitudeSquared() < SUSPICION_RANGE ^ 2 then
+        if (player.position - self.position):magnitudeSquared() < Rat.SUSPICION_RANGE ^ 2 then
             if player.last_flap == 0 or player.just_hit_ground then
                 self:listen()
             end
@@ -182,10 +180,9 @@ function Rat:draw()
     end
     love.graphics.draw(IMAGE, self.sprite, x, y, 0, flip, 1, w/2, h)
     if DEBUG and not self.caught then
-        love.graphics.circle("line", x, y, SUSPICION_RANGE)
+        love.graphics.circle("line", x, y, Rat.SUSPICION_RANGE)
         if not self.hiding then
-            love.graphics.circle("line", x, y, DETECTION_RANGE)
-            love.graphics.circle("line", x, y, AWARENESS_RANGE)
+            love.graphics.circle("line", x, y, Rat.AWARENESS_RANGE)
         end
         love.graphics.circle("fill", x, y, 2)
         love.graphics.rectangle("line", x, y, w, h)

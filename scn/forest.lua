@@ -1,9 +1,11 @@
-local controls = require 'controls'
-local lerp     = require 'lib.lerp'
+local controls      = require 'controls'
+local lerp          = require 'lib.lerp'
+local scene_manager = require 'lib.scene_manager'
 
 local Vector          = require 'lib.vector2'
 local ParallaxManager = require 'lib.parallax_manager'
 local Camera          = require 'lib.camera'
+local OutroScene      = require 'scn.outro'
 local Player          = require 'cls.player'
 local Rat             = require 'cls.rat'
 local HidingSpot      = require 'cls.hiding_spot'
@@ -46,7 +48,7 @@ local SPAWN_DELAY = 3
 local ROOST_DISTANCE = 32
 local SWOOP_SLOWDOWN = 4
 local HUNGER_LIMIT = 100
-local HUNGER_INCREASE_RATE = 0.5
+local HUNGER_INCREASE_RATE = 2
 local FLEDGELING_COMPLETE = 120
 local HUNGER_SATIATION_RAT = 20
 
@@ -64,8 +66,6 @@ function Scene.new()
 end
 
 function Scene:load()
-    -- TODO: Have some background music
-    love.graphics.setBackgroundColor(34/255,32/255,52/255)
     self.camera = Camera.new()
     self.camera:scale(4)
     self.camera:setBounds(0, -500, 1920 - 240, -160)
@@ -161,10 +161,14 @@ function Scene:keyPressed(key, isRepeat)
     if taking_off then
         self.player.roosting = false
     end
-end
-
-function Scene:mouseReleased(mx, my, key)
-
+    if DEBUG then
+        if key == "home" then
+            self.fledgeling_progress = FLEDGELING_COMPLETE
+        end
+        if key == "end" then
+            self.owlet_hunger = HUNGER_LIMIT
+        end
+    end
 end
 
 function Scene:updatePlayer(dt)
@@ -203,6 +207,12 @@ function Scene:updatePlayer(dt)
             self.player:catch(nearest_animal)
             nearest_animal:die()
             SOUNDS.catch:play()
+            -- TODO: Is a rat is caught in the radius of another, the other should flee
+            for _, animal in pairs(self.fauna) do
+                if (self.player.position - animal.position):magnitudeSquared() < Rat.AWARENESS_RANGE ^ 2 then
+                    animal:flee(self.player, self.hiding_spots)
+                end
+            end
         end
     end
     if self.player.roosting then
@@ -236,16 +246,12 @@ function Scene:spawnRat()
     table.insert(self.fauna, rat)
 end
 
--- TODO: Have an intro scene? Even if just wall of text.
-
 function Scene:lose()
-    -- TODO: Change scene to a game over screen (you lose!)
-    error("You lose")
+    scene_manager.setScene(OutroScene.new(false))
 end
 
 function Scene:win()
-    -- TODO: Change scene to a game over screen (you win!)
-    error("You win")
+    scene_manager.setScene(OutroScene.new(true))
 end
 
 function Scene:update(dt)
