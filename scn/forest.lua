@@ -42,6 +42,7 @@ local NEST_ARROWS = {
     love.graphics.newQuad(7, 7, 5, 5, 32, 32),  -- down_left
 }
 
+local SPAWN_DELAY = 3
 local ROOST_DISTANCE = 32
 local SWOOP_SLOWDOWN = 4
 
@@ -58,7 +59,6 @@ function Scene:load()
     self.camera:setBounds(0, -500, 1920 - 240, -160)
 
     self.parallax_manager = ParallaxManager.new(10)
-    -- TODO: Add background layers
     self.parallax_manager:add_layer(love.graphics.newImage("gfx/bg1.png"), {
         y        = 0,
         oy       = 320,
@@ -107,6 +107,7 @@ function Scene:load()
     self.player:roost(self.roost_spot[1], self.roost_spot[2])
     self.camera:centreOn(self.player.position.x, self.player.position.y)
     self.owlet_hunger = 0
+    self.spawn_clock = 0
 
     TUTORIAL.timers.movement = 0
 end
@@ -172,7 +173,7 @@ function Scene:updatePlayer(dt)
     if self.player.position.x > 1780 then
         self.player:accelerate(dt, Vector.new(-2, 0))
     end
-    if self.player.swooping and #self.fauna > 0 then
+    if self.player.swooping and not self.player.carried_prey and #self.fauna > 0 then
         local animal_index   = 1
         local nearest_animal = self.fauna[animal_index]
         local nearest_dist   = (nearest_animal.position - self.player.position):magnitudeSquared()
@@ -201,7 +202,32 @@ function Scene:updatePlayer(dt)
     end
 end
 
+function Scene:spawnRat()
+    self.spawn_clock = 0
+    local min_x = self.hiding_spots[1].position.x + 20
+    local max_x = self.hiding_spots[#self.hiding_spots].position.x - 20
+    local y = -20
+    local x = min_x + (max_x - min_x) * math.random()
+    local position = Vector.new(x, y)
+    -- TODO: find nearest spawn point and have that be the initial position and 
+    --       have the rat be *moving to* (x, y)
+    local nearest_spot = self.hiding_spots[1]
+    local nearest_dist = (nearest_spot.position - position):magnitudeSquared()
+    for _, spot in pairs(self.hiding_spots) do
+        local dist = (spot.position - position):magnitudeSquared()
+        if spot.position.x < position.x and dist < nearest_dist then
+            nearest_spot = spot
+            nearest_dist = dist
+        end
+    end
+    local rat = Rat.new(nearest_spot.position.x, y)
+    rat:move(position)
+    table.insert(self.fauna, rat)
+    print("New Rat", x, y)
+end
+
 function Scene:update(dt)
+    self.spawn_clock = self.spawn_clock + dt
     if self.player.swooping then
         dt = dt / SWOOP_SLOWDOWN
     end
@@ -209,7 +235,9 @@ function Scene:update(dt)
     for _, animal in pairs(self.fauna) do
         animal:update(dt, self.player, self.hiding_spots)
     end
-    -- TODO: Spawn of rats
+    if (#self.fauna < 2 or math.random() < 1/(#self.fauna)^4) and self.spawn_clock > SPAWN_DELAY then 
+        self:spawnRat()
+    end
 end
 
 function Scene:drawPlayer()

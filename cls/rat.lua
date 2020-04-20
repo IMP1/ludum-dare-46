@@ -51,6 +51,12 @@ function Rat:die()
     self.caught = true
 end
 
+function Rat:move(target)
+    self.grazing = false
+    self.move_target = target
+    self.moving = true
+end
+
 function Rat:update(dt, player, hiding_spots)
     if self.fleeing then
         local distance = (self.position - self.flee_target):magnitude()
@@ -94,9 +100,7 @@ function Rat:update(dt, player, hiding_spots)
             self.graze_timer = self.graze_timer - dt
             if self.graze_timer <= 0 then
                 self.graze_timer = 0
-                self.grazing = false
-                self.move_target = random_graze_spot(self, hiding_spots)
-                self.moving = true
+                self:move(random_graze_spot(self, hiding_spots))
             end
         end
     end

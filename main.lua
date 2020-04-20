@@ -13,13 +13,23 @@ local canvas
 TUTORIAL = {
     timers = {
         movement = nil,
+        hunting = nil,
         swooping = nil,
+        roosting = nil,
+        hunger = nil,
     },
     movement_displayed = false,
+    hunting_displayed = false,
     swooping_displayed = false,
+    roosting_displayed = false,
+    hunger_displayed = false,
 }
 
--- TODO: Add prompts for gameplay
+-- TODO: Add prompts for gameplay aspects
+--         * hunting
+--         * swooping
+--         * roosting
+--         * hunger
 
 function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
