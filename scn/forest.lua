@@ -45,6 +45,17 @@ local NEST_ARROWS = {
 local SPAWN_DELAY = 3
 local ROOST_DISTANCE = 32
 local SWOOP_SLOWDOWN = 4
+local HUNGER_LIMIT = 100
+local HUNGER_INCREASE_RATE = 0.5
+local FLEDGELING_COMPLETE = 120
+local HUNGER_SATIATION_RAT = 20
+
+local FOOD_IMAGE = love.graphics.newImage("gfx/food.png")
+local FOOD_QUADS = {
+    full = love.graphics.newQuad(0, 0, 32, 32, 64, 32),
+    empty = love.graphics.newQuad(32, 0, 32, 32, 64, 32),
+}
+
 
 function Scene.new()
     local self = BaseScene.new("Forest")
@@ -54,6 +65,7 @@ end
 
 function Scene:load()
     love.graphics.setBackgroundColor(34/255,32/255,52/255)
+    -- FOOD_IMAGE:setFilter("nearest", "nearest")
     self.camera = Camera.new()
     self.camera:scale(4)
     self.camera:setBounds(0, -500, 1920 - 240, -160)
@@ -106,8 +118,9 @@ function Scene:load()
     self.player = Player.new(0, 0)
     self.player:roost(self.roost_spot[1], self.roost_spot[2])
     self.camera:centreOn(self.player.position.x, self.player.position.y)
-    self.owlet_hunger = 0
     self.spawn_clock = 0
+    self.owlet_hunger = 0
+    self.fledgeling_progress = 0
 
     TUTORIAL.timers.movement = 0
 end
@@ -128,7 +141,7 @@ function Scene:keyPressed(key, isRepeat)
             if self.player.carried_prey then
                 self.player.carried_prey = nil
                 SOUNDS.chewing:play()
-                -- TODO: lower hunger
+                self.owlet_hunger = math.max(0, self.owlet_hunger - HUNGER_SATIATION_RAT)
             end
         end
     end
@@ -164,8 +177,8 @@ function Scene:updatePlayer(dt)
         self.player.velocity = self.player.velocity:normalise() * speed * 0.2
         self.player.just_hit_ground = true
     end
-    if self.player.position.y < -350 and self.player.velocity.y < 0 then
-        self.player.velocity.y = -self.player.velocity.y * 0.1
+    if self.player.position.y < -300 then
+        self.player:accelerate(dt, Vector.new(0, 2))
     end
     if self.player.position.x < 170 then
         self.player:accelerate(dt, Vector.new(2, 0))
@@ -209,8 +222,6 @@ function Scene:spawnRat()
     local y = -20
     local x = min_x + (max_x - min_x) * math.random()
     local position = Vector.new(x, y)
-    -- TODO: find nearest spawn point and have that be the initial position and 
-    --       have the rat be *moving to* (x, y)
     local nearest_spot = self.hiding_spots[1]
     local nearest_dist = (nearest_spot.position - position):magnitudeSquared()
     for _, spot in pairs(self.hiding_spots) do
@@ -220,13 +231,30 @@ function Scene:spawnRat()
             nearest_dist = dist
         end
     end
-    local rat = Rat.new(nearest_spot.position.x, y)
+    local rat = Rat.new(nearest_spot.position.x + nearest_spot.size.x / 2, nearest_spot.position.y + nearest_spot.size.y)
     rat:move(position)
     table.insert(self.fauna, rat)
-    print("New Rat", x, y)
+end
+
+function Scene:lose()
+    -- TODO: Change scene to a game over screen (you lose!)
+    error("You lose")
+end
+
+function Scene:win()
+    -- TODO: Change scene to a game over screen (you win!)
+    error("You win")
 end
 
 function Scene:update(dt)
+    self.owlet_hunger = self.owlet_hunger + dt * HUNGER_INCREASE_RATE
+    if self.owlet_hunger >= HUNGER_LIMIT then
+        self:lose()
+    end
+    self.fledgeling_progress = self.fledgeling_progress + dt
+    if self.fledgeling_progress >= FLEDGELING_COMPLETE then
+        self:win()
+    end
     self.spawn_clock = self.spawn_clock + dt
     if self.player.swooping then
         dt = dt / SWOOP_SLOWDOWN
@@ -235,7 +263,7 @@ function Scene:update(dt)
     for _, animal in pairs(self.fauna) do
         animal:update(dt, self.player, self.hiding_spots)
     end
-    if (#self.fauna < 2 or math.random() < 1/(#self.fauna)^4) and self.spawn_clock > SPAWN_DELAY then 
+    if (#self.fauna < 2 or math.random() < 1/(#self.fauna + 1)^4) and self.spawn_clock > SPAWN_DELAY then 
         self:spawnRat()
     end
 end
@@ -281,6 +309,22 @@ function Scene:drawNestIndicator()
     end
 end
 
+function Scene:drawHungerMeter()
+    local x = 10
+    local y = 10
+    local height = 90
+    love.graphics.draw(FOOD_IMAGE, FOOD_QUADS.full, x, y)
+    love.graphics.draw(FOOD_IMAGE, FOOD_QUADS.empty, x, y + height)
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.rectangle("fill", x + 32, y + 16, 8, height)
+    love.graphics.setColor(1, 1, 1)
+    local full = math.floor(height * (HUNGER_LIMIT - self.owlet_hunger) / HUNGER_LIMIT)
+    love.graphics.rectangle("fill", x + 34, y + 18 + height - full, 4, full - 4)
+    if DEBUG then
+        love.graphics.print(tostring(HUNGER_LIMIT - self.owlet_hunger), 64, 64)
+    end
+end
+
 function Scene:draw()
     love.graphics.setColor(1, 1, 1)
     self.camera:set()
@@ -299,8 +343,8 @@ function Scene:draw()
         love.graphics.setColor(1, 1, 1)
         love.graphics.push()
         love.graphics.origin()
-        love.graphics.print(tostring(self.player.position), 0, 0)
-        love.graphics.print(tostring(self.player.last_flap), 0, 16)
+        love.graphics.print(tostring(self.player.position), 320, 0)
+        love.graphics.print(tostring(self.player.last_flap), 320, 16)
         love.graphics.pop()
         love.graphics.circle("line", self.roost_spot[1], self.roost_spot[2], ROOST_DISTANCE)
         for _, obj in pairs(self.hiding_spots) do
@@ -309,6 +353,11 @@ function Scene:draw()
         love.graphics.circle("line", self.player.position.x, self.player.position.y, Player.CATCH_DISTANCE)
     end
     self.camera:unset()
+    self:drawHungerMeter()
+    if DEBUG then
+        love.graphics.print(self.fledgeling_progress, 320, 320)
+        love.graphics.print(FLEDGELING_COMPLETE, 320, 336)
+    end
 end
 
 function Scene:close()
