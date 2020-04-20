@@ -207,7 +207,6 @@ function Scene:updatePlayer(dt)
             self.player:catch(nearest_animal)
             nearest_animal:die()
             SOUNDS.catch:play()
-            -- TODO: Is a rat is caught in the radius of another, the other should flee
             for _, animal in pairs(self.fauna) do
                 if (self.player.position - animal.position):magnitudeSquared() < Rat.AWARENESS_RANGE ^ 2 then
                     animal:flee(self.player, self.hiding_spots)

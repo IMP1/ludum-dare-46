@@ -54,8 +54,6 @@ function Player:accelerate(dt, direction)
     self.velocity = lerp.lerp(self.velocity, self.velocity + direction * ACCELERATION, dt)
 end
 
--- TODO: If not flapping then start to drop slightly
-
 function Player:update_movement(dt)
     self.last_flap = self.last_flap + dt
     if self.roosting then return end
@@ -71,6 +69,9 @@ function Player:update_movement(dt)
     end
     if love.keyboard.isDown(controls.move_right) then
         impulse.x = impulse.x + 1
+    end
+    if self.last_flap > 1 and self.last_flap > dt then
+        impulse.y = impulse.y + 0.1
     end
     if impulse:magnitudeSquared() > 0 then
         self:accelerate(dt, impulse:normalise())
