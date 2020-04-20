@@ -8,13 +8,12 @@ DEBUG = true
 
 local PIXEL_SCALE = 1
 local WIDTH, HEIGHT = love.graphics.getWidth(), love.graphics.getHeight()
-local canvas
 
 TUTORIALS = {
     movement = {
         timer = nil,
         completed = false,
-        message = "Use WASD or the Arrow keys to move.",
+        message = T"Use WASD or the Arrow keys to move.",
         delay = 4,
     },
     -- movement_displayed = false,
@@ -31,14 +30,20 @@ TUTORIALS = {
 --         * roosting
 --         * hunger
 
+-- TODO: SUBMIT
+
 function love.load()
+    local bgm = love.audio.newSource("sfx/bensound-ofeliasdream.mp3", "stream")
+    bgm:setLooping(true)
+    bgm:play()
+    love.graphics.setBackgroundColor(34/255,32/255,52/255)
     love.graphics.setDefaultFilter("nearest", "nearest")
     love.graphics.setLineStyle("rough")
     local pixel_font = love.graphics.newImageFont("gfx/font.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz1234567890!?.,:;'()-", 1) 
     love.graphics.setFont(pixel_font)
-    local ForestScene = require 'scn.forest'
+    local Scene = require 'scn.title'
     scene_manager.hook()
-    scene_manager.setScene(ForestScene.new())
+    scene_manager.setScene(Scene.new())
 end
 
 function love.keypressed(key)
