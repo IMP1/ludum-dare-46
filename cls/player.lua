@@ -54,6 +54,8 @@ function Player:accelerate(dt, direction)
     self.velocity = lerp.lerp(self.velocity, self.velocity + direction * ACCELERATION, dt)
 end
 
+-- TODO: If not flapping then start to drop slightly
+
 function Player:update_movement(dt)
     self.last_flap = self.last_flap + dt
     if self.roosting then return end
