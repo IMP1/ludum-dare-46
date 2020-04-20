@@ -1,6 +1,7 @@
 local controls = require 'controls'
-local vec2     = require 'lib.vector2'
 local lerp     = require 'lib.lerp'
+
+local Vector = require 'lib.vector2'
 
 local ACCELERATION = 256 -- pixels / second / second
 local MIN_SPEED    = 32  -- pixels / second
@@ -21,38 +22,47 @@ local QUADS = {
 local Player = {}
 Player.__index = Player
 
+Player.CATCH_DISTANCE = 18
+
 function Player.new(x, y)
     local self = {}
     setmetatable(self, Player)
-    self.position = vec2.new(x, y)
-    self.velocity = vec2.new(0, 0)
+    self.position = Vector.new(x, y)
+    self.velocity = Vector.new(0, 0)
     self.sprite   = QUADS.straight
     self.swooping = false
     self.roosting = true
     self.gliding  = false
     self.last_flap = 0
+    self.carried_prey = nil
+    self.just_hit_ground = false
     return self
 end
 
 function Player:update_movement(dt)
     self.last_flap = self.last_flap + dt
     if self.roosting then return end
-    local impulse = vec2.new(0, 0)
+    local impulse = Vector.new(0, 0)
     if love.keyboard.isDown(controls.move_up) then
-        impulse.y = impulse.y - 64
+        impulse.y = impulse.y - 1
     end    
     if love.keyboard.isDown(controls.move_left) then
-        impulse.x = impulse.x - 64
+        impulse.x = impulse.x - 1
     end
     if love.keyboard.isDown(controls.move_down) then
-        impulse.y = impulse.y + 64
+        impulse.y = impulse.y + 1
     end
     if love.keyboard.isDown(controls.move_right) then
-        impulse.x = impulse.x + 64
+        impulse.x = impulse.x + 1
     end
     if impulse:magnitudeSquared() > 0 then
         self.velocity = lerp.lerp(self.velocity, self.velocity + impulse:normalise() * ACCELERATION, dt)
         self.last_flap = 0
+    end
+    if love.keyboard.isDown(controls.move_swoop) then
+        self.swooping = true
+    else
+        self.swooping = false
     end
     if self.velocity:magnitudeSquared() > MAX_SPEED ^ 2 then
         self.velocity = self.velocity:normalise() * MAX_SPEED
@@ -75,8 +85,6 @@ function Player:update_sprite(dt)
 end
 
 function Player:roost(x, y)
-    -- TODO: make player switch sprite to standing one
-    -- TODO: make player face left
     self.roosting = true
     self.position.x = x
     self.position.y = y
@@ -88,6 +96,9 @@ end
 function Player:update(dt)
     self:update_movement(dt)
     self:update_sprite(dt)
+    if self.just_hit_ground then
+        self.just_hit_ground = false
+    end
 end
 
 function Player:draw(dt)
@@ -97,6 +108,10 @@ function Player:draw(dt)
         flip = -1
     end
     love.graphics.draw(IMAGE, self.sprite, self.position[1], self.position[2], 0, flip, 1, w/2, h/2)
+    if self.carried_prey then
+        self.carried_prey.position = self.position + Vector.new(0, 16)
+        self.carried_prey:draw()
+    end
 end
 
 return Player

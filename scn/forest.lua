@@ -73,33 +73,38 @@ function Scene:load()
         movement = 1,
         tint     = {0.7, 0.8, 1},
     })
-
-    -- TODO: 
-    -- Try out moving mid layer slighly lower into middle of green?
-    -- Does it look too wierd having logs and rocks there?
+    self.parallax_manager:add_layer(love.graphics.newImage("gfx/objects.png"), {
+        y        = 0,
+        oy       = 320,
+        z_index  = 11,
+        repeat_x = false,
+        movement = 1,
+        tint     = {0.7, 0.8, 1},
+    })
 
     -- TODO: Add foreground layer
     -- TODO: Make rudimentary shadow sprite that is roughly the sillhouette of the bird
-    -- TODO: Implement rat AI and add some rats
     -- TODO: Add swooping graphic
+    -- TODO: Add caught-rat graphic
+    -- TODO: Add spawning of rats
 
     self.nest = {898, -139, 9, 6}
     self.roost_spot = {self.nest[1] + 10, self.nest[2] - 2}
 
     self.hiding_spots = {
-        HidingSpot.new("Hole",  162,  -41, 6, 5),
-        HidingSpot.new("Stick", 298,  -48, 19, 6),
-        HidingSpot.new("Rock",  377,  -49, 11, 8),
-        HidingSpot.new("Rock",  386,  -58, 20, 15),
-        HidingSpot.new("Log",   747,  -55, 22, 12),
-        HidingSpot.new("Rock",  1060, -58, 17, 12),
-        HidingSpot.new("Hole",  1335, -49, 7, 6),
-        HidingSpot.new("Rock",  1536, -56, 20, 15),
-        HidingSpot.new("Stick", 1771, -50, 22, 7),
+        HidingSpot.new("Hole",  162,  -26, 6, 5),
+        HidingSpot.new("Stick", 298,  -33, 19, 6),
+        HidingSpot.new("Rock",  377,  -34, 11, 8),
+        HidingSpot.new("Rock",  386,  -43, 20, 15),
+        HidingSpot.new("Log",   747,  -40, 22, 12),
+        HidingSpot.new("Rock",  1060, -43, 17, 12),
+        HidingSpot.new("Hole",  1335, -34, 7, 6),
+        HidingSpot.new("Rock",  1536, -41, 20, 15),
+        HidingSpot.new("Stick", 1771, -35, 22, 7),
     }
 
     self.fauna = {}
-    table.insert(self.fauna, Rat.new(0, 0))
+    table.insert(self.fauna, Rat.new(500, -20))
 
     self.player = Player.new(0, 0)
     self.player:roost(self.roost_spot[1], self.roost_spot[2])
@@ -143,7 +148,7 @@ function Scene:mouseReleased(mx, my, key)
 
 end
 
-function Scene:update(dt, mx, my)
+function Scene:updatePlayer(dt)
     self.player:update(dt)
     if self.player.position.y > -30 and self.player.velocity.y > 0 then
         SOUNDS.hit_ground:play()
@@ -151,19 +156,47 @@ function Scene:update(dt, mx, my)
         self.player.velocity.y = -self.player.velocity.y
         local speed = self.player.velocity:magnitude()
         self.player.velocity = self.player.velocity:normalise() * speed * 0.2
+        self.player.just_hit_ground = true
     end
     if self.player.position.y < -350 and self.player.velocity.y < 0 then
         self.player.velocity.y = -self.player.velocity.y * 0.1
     end
     -- TODO: Have player turn round on either end of map
-    local x, y = unpack(self.player.position.data)
+    if self.player.swooping and #self.fauna > 0 then
+        local animal_index   = 1
+        local nearest_animal = self.fauna[animal_index]
+        local nearest_dist   = (nearest_animal.position - self.player.position):magnitudeSquared()
+        for i, animal in pairs(self.fauna) do
+            local dist = (animal.position - self.player.position):magnitudeSquared()
+            if dist < nearest_dist and not animal.hiding then
+                nearest_animal = animal
+                nearest_dist = dist
+                animal_index = i
+            end
+        end
+        if nearest_dist < Player.CATCH_DISTANCE ^ 2 and not nearest_animal.hiding then
+            table.remove(self.fauna, animal_index)
+            self.player.carried_prey = nearest_animal
+            nearest_animal:die()
+        end
+    end
     if self.player.roosting then
         local cam_x, cam_y = self.camera:getCentre()
         local cam_vec = self.player.position - Vector.new(cam_x, cam_y)
         local cam_move = lerp.lerp(Vector.new(0, 0), cam_vec, dt * CAMERA_SNAP, true)
         self.camera:move(cam_move.x, cam_move.y)
     else
-        self.camera:centreOn(x, y)
+        self.camera:centreOn(self.player.position.x, self.player.position.y)
+    end
+end
+
+function Scene:update(dt)
+    if self.player.swooping then
+        dt = dt / 2
+    end
+    self:updatePlayer(dt)
+    for _, animal in pairs(self.fauna) do
+        animal:update(dt, self.player, self.hiding_spots)
     end
 end
 
@@ -191,7 +224,7 @@ end
 
 function Scene:drawNestIndicator()
     local nest_position = Vector.new(self.nest[1], self.nest[2])
-    local dist = 128
+    local dist = 64
     local dir = nest_position - self.player.position
     if dir:magnitudeSquared() > dist ^ 2 then
         local midpoint = (nest_position + self.player.position) / 2
@@ -222,14 +255,10 @@ function Scene:draw()
         love.graphics.print(tostring(self.player.last_flap), 0, 16)
         love.graphics.pop()
         love.graphics.circle("line", self.roost_spot[1], self.roost_spot[2], ROOST_DISTANCE)
-        -- love.graphics.line(0, 0, self.player.position.x, self.player.position.y)
-        -- love.graphics.circle("fill", self.player.position.x, self.player.position.y, 3)
-        -- love.graphics.setColor(1, 0, 0)
-        -- love.graphics.circle("fill", self.nest[1], self.nest[2], 3)
-        -- love.graphics.setColor(1, 0, 1)
-        -- for _, obj in pairs(self.hiding_spots) do
-            -- love.graphics.circle("fill", obj.position.x, obj.position.y, 2)
-        -- end
+        for _, obj in pairs(self.hiding_spots) do
+            love.graphics.rectangle("line", obj.position.x, obj.position.y, obj.size.x, obj.size.y)
+        end
+        love.graphics.circle("line", self.player.position.x, self.player.position.y, Player.CATCH_DISTANCE)
     end
     self.camera:unset()
 end

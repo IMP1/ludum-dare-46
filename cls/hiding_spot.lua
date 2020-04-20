@@ -12,8 +12,4 @@ function hiding_spot.new(name, x, y, w, h)
     return self
 end
 
-function hiding_spot:canHide(animal)
-
-end
-
 return hiding_spot
