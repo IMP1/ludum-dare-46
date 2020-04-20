@@ -15,7 +15,9 @@ Scene.__index = Scene
 
 local CAMERA_SNAP = 3
 local SOUNDS = {
-    hit_ground = love.audio.newSource("sfx/floof.ogg", "static")
+    hit_ground = love.audio.newSource("sfx/floof.ogg", "static"),
+    chewing = love.audio.newSource("sfx/chewing.ogg", "static"),
+    catch = love.audio.newSource("sfx/catch.ogg", "static"),
 }
 
 local SHADOW_MASK = love.graphics.newShader([[
@@ -41,6 +43,7 @@ local NEST_ARROWS = {
 }
 
 local ROOST_DISTANCE = 32
+local SWOOP_SLOWDOWN = 4
 
 function Scene.new()
     local self = BaseScene.new("Forest")
@@ -82,11 +85,7 @@ function Scene:load()
         tint     = {0.7, 0.8, 1},
     })
 
-    -- TODO: Add foreground layer
     -- TODO: Make rudimentary shadow sprite that is roughly the sillhouette of the bird
-    -- TODO: Add swooping graphic
-    -- TODO: Add caught-rat graphic
-    -- TODO: Add spawning of rats
 
     self.nest = {898, -139, 9, 6}
     self.roost_spot = {self.nest[1] + 10, self.nest[2] - 2}
@@ -109,6 +108,9 @@ function Scene:load()
     self.player = Player.new(0, 0)
     self.player:roost(self.roost_spot[1], self.roost_spot[2])
     self.camera:centreOn(self.player.position.x, self.player.position.y)
+    self.owlet_hunger = 0
+
+    TUTORIAL.timers.movement = 0
 end
 
 function Scene:keyPressed(key, isRepeat)
@@ -124,6 +126,11 @@ function Scene:keyPressed(key, isRepeat)
         local dy = y - self.player.position.y
         if dx ^ 2 + dy ^ 2 < ROOST_DISTANCE ^ 2 then
             self.player:roost(self.roost_spot[1], self.roost_spot[2])
+            if self.player.carried_prey then
+                self.player.carried_prey = nil
+                SOUNDS.chewing:play()
+                -- TODO: lower hunger
+            end
         end
     end
     local taking_off = false
@@ -176,8 +183,9 @@ function Scene:updatePlayer(dt)
         end
         if nearest_dist < Player.CATCH_DISTANCE ^ 2 and not nearest_animal.hiding then
             table.remove(self.fauna, animal_index)
-            self.player.carried_prey = nearest_animal
+            self.player:catch(nearest_animal)
             nearest_animal:die()
+            SOUNDS.catch:play()
         end
     end
     if self.player.roosting then
@@ -192,12 +200,13 @@ end
 
 function Scene:update(dt)
     if self.player.swooping then
-        dt = dt / 2
+        dt = dt / SWOOP_SLOWDOWN
     end
     self:updatePlayer(dt)
     for _, animal in pairs(self.fauna) do
         animal:update(dt, self.player, self.hiding_spots)
     end
+    -- TODO: Spawn of rats
 end
 
 function Scene:drawPlayer()
@@ -207,15 +216,20 @@ function Scene:drawPlayer()
         local x = self.player.position.x
         local y = self.player.position.y
         local opacity = 0.5 * dist
-        local size = 11 / dist
+        local size = 1 / dist
         love.graphics.stencil(function() 
             love.graphics.setShader(SHADOW_MASK)
             self.parallax_manager:drawMidground()
             love.graphics.setShader()
         end, "replace", 1)
-        love.graphics.setColor(0, 0, 0, opacity)
         love.graphics.setStencilTest("greater", 0)
-        love.graphics.ellipse("fill", x, -30, size, size / 3)
+        love.graphics.setColor(0, 0, 0, opacity)
+        local _, _, w, h = self.player.sprite:getViewport()
+        local flip = 1
+        if self.player.velocity.x < 0 then
+            flip = -1
+        end
+        love.graphics.draw(Player.IMAGE, self.player.sprite, x, -30, 0, flip * size, size, w/2, h/2)
         love.graphics.setStencilTest()
     end
     love.graphics.setColor(1, 1, 1)
@@ -247,6 +261,9 @@ function Scene:draw()
     self:drawPlayer()
     self.parallax_manager:drawForeground()
     self:drawNestIndicator()
+    if TUTORIAL.timers.movement and TUTORIAL.timers.movement > 4 and not TUTORIAL.movement_displayed then
+        love.graphics.printf("Use WASD or the Arrow keys to move.", self.player.position.x - 500, self.player.position.y - 24, 1000, "center")
+    end
     if DEBUG then
         love.graphics.setColor(1, 1, 1)
         love.graphics.push()
