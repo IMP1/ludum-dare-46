@@ -15,6 +15,7 @@ local QUADS = {
 
 local GRAZE_TIME_PERIOD = {1, 4}
 local LISTEN_TIME_PERIOD = {2, 3}
+local HIDE_TIME_PERIOD = {8, 12}
 local SUSPICION_RANGE = 128
 local AWARENESS_RANGE = 96
 local DETECTION_RANGE = 64
@@ -34,6 +35,7 @@ function Rat.new(x, y)
     self.caught = false
     self.graze_timer = GRAZE_TIME_PERIOD[1] + (GRAZE_TIME_PERIOD[2] - GRAZE_TIME_PERIOD[1]) * math.random()
     self.listen_timer = 0
+    self.hiding_timer = 0
     self.move_target = nil
     self.flee_target = nil
     return self
@@ -57,53 +59,9 @@ function Rat:move(target)
     self.moving = true
 end
 
-function Rat:update(dt, player, hiding_spots)
-    if self.fleeing then
-        local distance = (self.position - self.flee_target):magnitude()
-        self.position = lerp.lerp(self.position, self.flee_target, dt * FLEE_SPEED / distance, true)
-        if self.position == self.flee_target then
-            self.hiding = true
-        end
-        return
-    elseif self.listening then
-        if (player.position - self.position):magnitudeSquared() < AWARENESS_RANGE ^ 2 then
-            if player.last_flap == 0 or player.just_hit_ground then
-                self:flee(player, hiding_spots)
-            end
-        end
-        self.listen_timer = self.listen_timer - dt
-        if self.listen_timer <= 0 then
-            self.listen_timer = 0
-            self.listening = false
-            self.sprite = QUADS.idle
-        end
-        return
-    elseif self.moving or self.grazing then
-        if (player.position - self.position):magnitudeSquared() < AWARENESS_RANGE ^ 2 then
-            if player.last_flap == 0 or player.just_hit_ground then
-                self:flee(player, hiding_spots)
-            end
-        end
-        if (player.position - self.position):magnitudeSquared() < SUSPICION_RANGE ^ 2 then
-            if player.last_flap == 0 or player.just_hit_ground then
-                self:listen()
-            end
-        end
-        if self.moving then
-            local distance = (self.position - self.move_target):magnitude()
-            self.position = lerp.lerp(self.position, self.move_target, dt * MOVE_SPEED / distance, true)
-            if self.position == self.flee_target then
-                self.moving = false
-            end
-        end
-        if self.grazing then
-            self.graze_timer = self.graze_timer - dt
-            if self.graze_timer <= 0 then
-                self.graze_timer = 0
-                self:move(random_graze_spot(self, hiding_spots))
-            end
-        end
-    end
+function Rat:hide()
+    self.hiding = true
+    self.hiding_timer = HIDE_TIME_PERIOD[1] + (HIDE_TIME_PERIOD[2] - HIDE_TIME_PERIOD[1]) * math.random()
 end
 
 function Rat:listen()
@@ -149,6 +107,66 @@ function Rat:flee(player, hiding_spots)
     end
 end
 
+function Rat:update(dt, player, hiding_spots)
+    if self.hiding then
+        self.hiding_timer = self.hiding_timer - dt
+        if self.hiding_timer <= 0 then
+            local distance = (self.position - player.position):magnitudeSquared()
+            if distance > AWARENESS_RANGE ^ 2 then
+                self.hiding = false
+            end
+        end
+    elseif self.fleeing then
+        local distance = (self.position - self.flee_target):magnitude()
+        self.position = lerp.lerp(self.position, self.flee_target, dt * FLEE_SPEED / distance, true)
+        if self.position == self.flee_target then
+            self.fleeing = false
+            self:hide()
+        end
+        return
+    elseif self.listening then
+        if (player.position - self.position):magnitudeSquared() < AWARENESS_RANGE ^ 2 then
+            if player.last_flap == 0 or player.just_hit_ground then
+                self.listening = false
+                self:flee(player, hiding_spots)
+            end
+        end
+        self.listen_timer = self.listen_timer - dt
+        if self.listen_timer <= 0 then
+            self.listen_timer = 0
+            self.listening = false
+            self.sprite = QUADS.idle
+        end
+        return
+    elseif self.moving or self.grazing then
+        if (player.position - self.position):magnitudeSquared() < AWARENESS_RANGE ^ 2 then
+            if player.last_flap == 0 or player.just_hit_ground then
+                self:flee(player, hiding_spots)
+            end
+        end
+        if (player.position - self.position):magnitudeSquared() < SUSPICION_RANGE ^ 2 then
+            if player.last_flap == 0 or player.just_hit_ground then
+                self:listen()
+            end
+        end
+        if self.moving then
+            local distance = (self.position - self.move_target):magnitude()
+            self.position = lerp.lerp(self.position, self.move_target, dt * MOVE_SPEED / distance, true)
+            if self.position == self.flee_target then
+                self.moving = false
+            end
+        end
+        if self.grazing then
+            self.graze_timer = self.graze_timer - dt
+            if self.graze_timer <= 0 then
+                self.graze_timer = 0
+                self:move(random_graze_spot(self, hiding_spots))
+            end
+        end
+    end
+end
+
+
 function Rat:draw()
     local _, _, w, h = self.sprite:getViewport()
     local flip = 1
@@ -158,22 +176,26 @@ function Rat:draw()
     if self.move_target and self.move_target.x < self.position.x then
         flip = -1
     end
-    love.graphics.draw(IMAGE, self.sprite, self.position.x, self.position.y, 0, flip, 1, w/2, h)
+    local x, y = self.position.x, self.position.y
+    if self.hiding then
+        x = x + (math.random()- 0.5)
+    end
+    love.graphics.draw(IMAGE, self.sprite, x, y, 0, flip, 1, w/2, h)
     if DEBUG and not self.caught then
-        love.graphics.circle("line", self.position.x, self.position.y, SUSPICION_RANGE)
+        love.graphics.circle("line", x, y, SUSPICION_RANGE)
         if not self.hiding then
-            love.graphics.circle("line", self.position.x, self.position.y, DETECTION_RANGE)
-            love.graphics.circle("line", self.position.x, self.position.y, AWARENESS_RANGE)
+            love.graphics.circle("line", x, y, DETECTION_RANGE)
+            love.graphics.circle("line", x, y, AWARENESS_RANGE)
         end
-        love.graphics.circle("fill", self.position.x, self.position.y, 2)
-        love.graphics.rectangle("line", self.position.x, self.position.y, w, h)
+        love.graphics.circle("fill", x, y, 2)
+        love.graphics.rectangle("line", x, y, w, h)
         if self.flee_target then
             love.graphics.setColor(1, 0, 0)
-            love.graphics.line(self.position.x, self.position.y, self.flee_target.x, self.flee_target.y)
+            love.graphics.line(x, y, self.flee_target.x, self.flee_target.y)
         end
         if self.move_target then
             love.graphics.setColor(1, 1, 1)
-            love.graphics.line(self.position.x, self.position.y, self.move_target.x, self.move_target.y)
+            love.graphics.line(x, y, self.move_target.x, self.move_target.y)
         end
     end
 end

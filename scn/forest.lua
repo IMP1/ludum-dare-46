@@ -278,6 +278,7 @@ function Scene:drawPlayer()
         local y = self.player.position.y
         local opacity = 0.5 * dist
         local size = 1 / dist
+        local size_long = 1 / dist / dist
         love.graphics.stencil(function() 
             love.graphics.setShader(SHADOW_MASK)
             self.parallax_manager:drawMidground()
@@ -290,7 +291,7 @@ function Scene:drawPlayer()
         if self.player.velocity.x < 0 then
             flip = -1
         end
-        love.graphics.draw(Player.IMAGE, self.player.sprite, x, -30, 0, flip * size, size, w/2, h/2)
+        love.graphics.draw(Player.IMAGE, self.player.sprite, x, -30, 0, flip * size_long, size / dist, w/2, h/2)
         love.graphics.setStencilTest()
     end
     love.graphics.setColor(1, 1, 1)
@@ -360,10 +361,6 @@ function Scene:draw()
         love.graphics.print(self.fledgeling_progress, 320, 320)
         love.graphics.print(FLEDGELING_COMPLETE, 320, 336)
     end
-end
-
-function Scene:close()
-
 end
 
 return Scene
