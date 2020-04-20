@@ -50,6 +50,10 @@ function Player.new(x, y)
     return self
 end
 
+function Player:accelerate(dt, direction)
+    self.velocity = lerp.lerp(self.velocity, self.velocity + direction * ACCELERATION, dt)
+end
+
 function Player:update_movement(dt)
     self.last_flap = self.last_flap + dt
     if self.roosting then return end
@@ -67,7 +71,7 @@ function Player:update_movement(dt)
         impulse.x = impulse.x + 1
     end
     if impulse:magnitudeSquared() > 0 then
-        self.velocity = lerp.lerp(self.velocity, self.velocity + impulse:normalise() * ACCELERATION, dt)
+        self:accelerate(dt, impulse:normalise())
         self.last_flap = 0
         TUTORIAL.movement_displayed = true
         self.flap_animation_timer = self.flap_animation_timer + dt
