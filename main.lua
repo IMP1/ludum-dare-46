@@ -12,6 +12,8 @@ local canvas
 
 function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
+    local pixel_font = love.graphics.newImageFont("gfx/font.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz1234567890!?.,:;'()-", 1) 
+    love.graphics.setFont(pixel_font)
     local ForestScene = require 'scn.forest'
     scene_manager.hook()
     scene_manager.setScene(ForestScene.new())
