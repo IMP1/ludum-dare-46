@@ -20,6 +20,9 @@ function Scene:load()
     if self.success then
         love.graphics.printf(T"Your little owlet isn't so little anymore.", 16, 64, 208, "center")
         love.graphics.printf(T"With its belly full, it begins its journey.", 16, 80, 208, "center")
+        for _, t in pairs(TUTORIALS) do
+            t.completed = true
+        end
     else
         love.graphics.printf(T"The nest is quiet now.", 16, 72, 208, "center")
     end

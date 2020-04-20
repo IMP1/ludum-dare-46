@@ -98,7 +98,7 @@ function Scene:load()
     })
 
     self.nest = {898, -139, 9, 6}
-    self.roost_spot = {self.nest[1] + 10, self.nest[2] - 2}
+    self.roost_spot = Vector.new(self.nest[1] + 10, self.nest[2] - 2)
 
     self.hiding_spots = {
         HidingSpot.new("Hole",  162,  -26, 6, 5),
@@ -116,16 +116,26 @@ function Scene:load()
     table.insert(self.fauna, Rat.new(500, -20))
 
     self.player = Player.new(0, 0)
-    self.player:roost(self.roost_spot[1], self.roost_spot[2])
+    self.player:roost(self.roost_spot.x, self.roost_spot.y)
     self.camera:centreOn(self.player.position.x, self.player.position.y)
     self.spawn_clock = 0
     self.owlet_hunger = 0
     self.fledgeling_progress = 0
+    self.easy_mode = false
 
     TUTORIALS.movement.timer = 0
 end
 
 function Scene:keyPressed(key, isRepeat)
+    if key == "t" then
+        for _, t in pairs(TUTORIALS) do
+            t.completed = true
+        end
+        TUTORIALS_OFF = true
+    end
+    if not TUTORIALS.hunting.timer then
+        TUTORIALS.hunting.timer = 0
+    end
     local landing = false
     for _, c in pairs(controls.move_land) do
         if c == key then
@@ -137,12 +147,18 @@ function Scene:keyPressed(key, isRepeat)
         local dx = x - self.player.position.x
         local dy = y - self.player.position.y
         if dx ^ 2 + dy ^ 2 < ROOST_DISTANCE ^ 2 then
-            self.player:roost(self.roost_spot[1], self.roost_spot[2])
+            self.player:roost(self.roost_spot.x, self.roost_spot.y)
             if self.player.carried_prey then
                 self.player.carried_prey = nil
                 SOUNDS.chewing:play()
                 self.owlet_hunger = math.max(0, self.owlet_hunger - HUNGER_SATIATION_RAT)
+                TUTORIALS.hunger.completed = true
             end
+        end
+        TUTORIALS.roosting.completed = true
+    elseif (self.roost_spot - self.player.position):magnitudeSquared() < ROOST_DISTANCE ^ 2 then
+        if not self.player.roosting then
+            TUTORIALS.roosting.timer = 0
         end
     end
     local taking_off = false
@@ -168,59 +184,6 @@ function Scene:keyPressed(key, isRepeat)
         if key == "end" then
             self.owlet_hunger = HUNGER_LIMIT
         end
-    end
-end
-
-function Scene:updatePlayer(dt)
-    self.player:update(dt)
-    if self.player.position.y > -30 and self.player.velocity.y > 0 then
-        SOUNDS.hit_ground:play()
-        self.player.position.y = math.min(self.player.position.y, -29)
-        self.player.velocity.y = -self.player.velocity.y
-        local speed = self.player.velocity:magnitude()
-        self.player.velocity = self.player.velocity:normalise() * speed * 0.2
-        self.player.just_hit_ground = true
-    end
-    if self.player.position.y < -300 then
-        self.player:accelerate(dt, Vector.new(0, 2))
-    end
-    if self.player.position.x < 170 then
-        self.player:accelerate(dt, Vector.new(2, 0))
-    end
-    if self.player.position.x > 1780 then
-        self.player:accelerate(dt, Vector.new(-2, 0))
-    end
-    if self.player.swooping and not self.player.carried_prey and #self.fauna > 0 then
-        local animal_index   = 1
-        local nearest_animal = self.fauna[animal_index]
-        local nearest_dist   = (nearest_animal.position - self.player.position):magnitudeSquared()
-        for i, animal in pairs(self.fauna) do
-            local dist = (animal.position - self.player.position):magnitudeSquared()
-            if dist < nearest_dist and not animal.hiding then
-                nearest_animal = animal
-                nearest_dist = dist
-                animal_index = i
-            end
-        end
-        if nearest_dist < Player.CATCH_DISTANCE ^ 2 and not nearest_animal.hiding then
-            table.remove(self.fauna, animal_index)
-            self.player:catch(nearest_animal)
-            nearest_animal:die()
-            SOUNDS.catch:play()
-            for _, animal in pairs(self.fauna) do
-                if (self.player.position - animal.position):magnitudeSquared() < Rat.AWARENESS_RANGE ^ 2 then
-                    animal:flee(self.player, self.hiding_spots)
-                end
-            end
-        end
-    end
-    if self.player.roosting then
-        local cam_x, cam_y = self.camera:getCentre()
-        local cam_vec = self.player.position - Vector.new(cam_x, cam_y)
-        local cam_move = lerp.lerp(Vector.new(0, 0), cam_vec, dt * CAMERA_SNAP, true)
-        self.camera:move(cam_move.x, cam_move.y)
-    else
-        self.camera:centreOn(self.player.position.x, self.player.position.y)
     end
 end
 
@@ -253,8 +216,80 @@ function Scene:win()
     scene_manager.setScene(OutroScene.new(true))
 end
 
+function Scene:updatePlayer(dt)
+    self.player:update(dt)
+    if self.player.last_flap == 0 then
+        TUTORIALS.movement.completed = true
+    end
+    if self.player.position.y > -30 and self.player.velocity.y > 0 then
+        SOUNDS.hit_ground:play()
+        self.player.position.y = math.min(self.player.position.y, -29)
+        self.player.velocity.y = -self.player.velocity.y
+        local speed = self.player.velocity:magnitude()
+        self.player.velocity = self.player.velocity:normalise() * speed * 0.2
+        self.player.just_hit_ground = true
+    end
+    if self.player.position.y < -300 then
+        self.player:accelerate(dt, Vector.new(0, 2))
+    end
+    if self.player.position.x < 170 then
+        self.player:accelerate(dt, Vector.new(2, 0))
+    end
+    if self.player.position.x > 1780 then
+        self.player:accelerate(dt, Vector.new(-2, 0))
+    end
+    if #self.fauna > 0 then
+        local animal_index   = 1
+        local nearest_animal = self.fauna[animal_index]
+        local nearest_dist   = (nearest_animal.position - self.player.position):magnitudeSquared()
+        for i, animal in pairs(self.fauna) do
+            local dist = (animal.position - self.player.position):magnitudeSquared()
+            if dist < nearest_dist and not animal.hiding then
+                nearest_animal = animal
+                nearest_dist = dist
+                animal_index = i
+            end
+        end
+        if nearest_dist < Player.CATCH_DISTANCE ^ 2 and not nearest_animal.hiding and
+                self.player.swooping and not self.player.carried_prey then
+            TUTORIALS.swooping.complete = true
+            table.remove(self.fauna, animal_index)
+            self.player:catch(nearest_animal)
+            nearest_animal:die()
+            SOUNDS.catch:play()
+            for _, animal in pairs(self.fauna) do
+                if (self.player.position - animal.position):magnitudeSquared() < Rat.AWARENESS_RANGE ^ 2 then
+                    animal:flee(self.player, self.hiding_spots)
+                end
+            end
+            if not TUTORIALS.hunger.timer then
+                TUTORIALS.hunger.timer = 0
+            end
+        elseif nearest_dist < Player.CATCH_DISTANCE ^ 2 and nearest_animal.hiding then
+            TUTORIALS.hiding.timer = 0
+        elseif nearest_dist < Player.CATCH_DISTANCE ^ 2 then
+            TUTORIALS.swooping.timer = 0
+        end
+    end
+    if self.player.roosting then
+        local cam_x, cam_y = self.camera:getCentre()
+        local cam_vec = self.player.position - Vector.new(cam_x, cam_y)
+        local cam_move = lerp.lerp(Vector.new(0, 0), cam_vec, dt * CAMERA_SNAP, true)
+        self.camera:move(cam_move.x, cam_move.y)
+    else
+        self.camera:centreOn(self.player.position.x, self.player.position.y)
+    end
+end
+
 function Scene:update(dt)
+    if TUTORIALS.movement.timer and TUTORIALS.movement.timer > TUTORIALS.movement.delay and not self.easy_mode then
+        HUNGER_INCREASE_RATE = HUNGER_INCREASE_RATE / 2
+        self.easy_mode = true
+    end
     self.owlet_hunger = self.owlet_hunger + dt * HUNGER_INCREASE_RATE
+    if self.owlet_hunger >= HUNGER_LIMIT / 4 and not TUTORIALS.hunger.timer then
+        TUTORIALS.hunger.timer = 0
+    end
     if self.owlet_hunger >= HUNGER_LIMIT then
         self:lose()
     end
@@ -333,6 +368,16 @@ function Scene:drawHungerMeter()
     end
 end
 
+function Scene:drawPrompts()
+    local message = ""
+    for _, tutorial in pairs(TUTORIALS) do
+        if tutorial.timer and tutorial.timer > tutorial.delay and not tutorial.completed then
+            message = tutorial.message
+        end
+    end
+    love.graphics.printf(message, self.player.position.x - 120, self.player.position.y - 24, 240, "center")
+end
+
 function Scene:draw()
     love.graphics.setColor(1, 1, 1)
     self.camera:set()
@@ -341,12 +386,10 @@ function Scene:draw()
     for _, animal in pairs(self.fauna) do
         animal:draw()
     end
-    self:drawPlayer()
     self.parallax_manager:drawForeground()
+    self:drawPlayer()
     self:drawNestIndicator()
-    if TUTORIALS.movement.timer and TUTORIALS.movement.timer > 4 and not TUTORIALS.movement.completed then
-        love.graphics.printf(TUTORIALS.movement.message, self.player.position.x - 500, self.player.position.y - 24, 1000, "center")
-    end
+    self:drawPrompts()
     if DEBUG then
         love.graphics.setColor(1, 1, 1)
         love.graphics.push()
@@ -354,7 +397,7 @@ function Scene:draw()
         love.graphics.print(tostring(self.player.position), 320, 0)
         love.graphics.print(tostring(self.player.last_flap), 320, 16)
         love.graphics.pop()
-        love.graphics.circle("line", self.roost_spot[1], self.roost_spot[2], ROOST_DISTANCE)
+        love.graphics.circle("line", self.roost_spot.x, self.roost_spot.y, ROOST_DISTANCE)
         for _, obj in pairs(self.hiding_spots) do
             love.graphics.rectangle("line", obj.position.x, obj.position.y, obj.size.x, obj.size.y)
         end
@@ -365,6 +408,9 @@ function Scene:draw()
     if DEBUG then
         love.graphics.print(self.fledgeling_progress, 320, 320)
         love.graphics.print(FLEDGELING_COMPLETE, 320, 336)
+    end
+    if not TUTORIALS_OFF then
+        love.graphics.printf("Press T to turn off hints.", 0, 0, 960, "right")
     end
 end
 

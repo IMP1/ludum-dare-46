@@ -138,12 +138,19 @@ function Rat:update(dt, player, hiding_spots)
         return
     elseif self.moving or self.grazing then
         if (player.position - self.position):magnitudeSquared() < Rat.AWARENESS_RANGE ^ 2 then
+            TUTORIALS.hunting.completed = true
             if player.last_flap == 0 or player.just_hit_ground then
+                if not TUTORIALS.stealth.timer then 
+                    TUTORIALS.stealth.timer = 0 
+                end
                 self:flee(player, hiding_spots)
             end
         end
         if (player.position - self.position):magnitudeSquared() < Rat.SUSPICION_RANGE ^ 2 then
             if player.last_flap == 0 or player.just_hit_ground then
+                if not TUTORIALS.stealth.timer then 
+                    TUTORIALS.stealth.timer = 0 
+                end
                 self:listen()
             end
         end
