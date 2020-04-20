@@ -30,10 +30,12 @@ function Player.new(x, y)
     self.swooping = false
     self.roosting = true
     self.gliding  = false
+    self.last_flap = 0
     return self
 end
 
 function Player:update_movement(dt)
+    self.last_flap = self.last_flap + dt
     if self.roosting then return end
     local impulse = vec2.new(0, 0)
     if love.keyboard.isDown(controls.move_up) then
@@ -50,6 +52,7 @@ function Player:update_movement(dt)
     end
     if impulse:magnitudeSquared() > 0 then
         self.velocity = lerp.lerp(self.velocity, self.velocity + impulse:normalise() * ACCELERATION, dt)
+        self.last_flap = 0
     end
     if self.velocity:magnitudeSquared() > MAX_SPEED ^ 2 then
         self.velocity = self.velocity:normalise() * MAX_SPEED
