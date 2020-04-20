@@ -18,8 +18,6 @@ local SOUNDS = {
     hit_ground = love.audio.newSource("sfx/floof.ogg", "static")
 }
 
-local BACKGROUND = love.graphics.newImage("gfx/bg1.png")
-local BACKGROUND_LOOP = love.graphics.newQuad(0, 0, 1920, BACKGROUND:getHeight(), BACKGROUND:getWidth(), BACKGROUND:getHeight())
 local SHADOW_MASK = love.graphics.newShader([[
     vec4 effect(vec4 colour, Image texture, vec2 texture_coords, vec2 screen_coords)
     {
@@ -30,6 +28,19 @@ local SHADOW_MASK = love.graphics.newShader([[
         return vec4(1.0);
     }
 ]])
+local NEST_ARROW_IMAGE = love.graphics.newImage("gfx/nest_indicator.png")
+local NEST_ARROWS = {
+    love.graphics.newQuad(1, 1, 4, 5, 32, 32),  -- left
+    love.graphics.newQuad(23, 1, 5, 5, 32, 32), -- up_left
+    love.graphics.newQuad(17, 1, 5, 4, 32, 32), -- up
+    love.graphics.newQuad(1, 7, 5, 5, 32, 32),  -- up_right
+    love.graphics.newQuad(6, 1, 4, 5, 32, 32),  -- right
+    love.graphics.newQuad(13, 7, 5, 5, 32, 32), -- down_right
+    love.graphics.newQuad(11, 2, 5, 4, 32, 32), -- down
+    love.graphics.newQuad(7, 7, 5, 5, 32, 32),  -- down_left
+}
+
+local ROOST_DISTANCE = 32
 
 function Scene.new()
     local self = BaseScene.new("Forest")
@@ -45,10 +56,19 @@ function Scene:load()
 
     self.parallax_manager = ParallaxManager.new(10)
     -- TODO: Add background layers
+    self.parallax_manager:add_layer(love.graphics.newImage("gfx/bg1.png"), {
+        y        = 0,
+        oy       = 320,
+        z_index  = 0,
+        repeat_x = true,
+        pad_y    = true,
+        movement = 1,
+        width    = 1920,
+    })
     self.parallax_manager:add_layer(love.graphics.newImage("gfx/midground.png"), {
         y        = 0,
         oy       = 320,
-        z_index  = 5,
+        z_index  = 10,
         repeat_x = false,
         movement = 1,
         tint     = {0.7, 0.8, 1},
@@ -97,8 +117,7 @@ function Scene:keyPressed(key, isRepeat)
         local x, y = self.nest[1] + self.nest[3] / 2, self.nest[2] + self.nest[4] / 2
         local dx = x - self.player.position.x
         local dy = y - self.player.position.y
-        local some_arbitrary_distance = 128
-        if dx ^ 2 + dy ^ 2 < some_arbitrary_distance ^ 2 then
+        if dx ^ 2 + dy ^ 2 < ROOST_DISTANCE ^ 2 then
             self.player:roost(self.roost_spot[1], self.roost_spot[2])
         end
     end
@@ -148,15 +167,7 @@ function Scene:update(dt, mx, my)
     end
 end
 
-function Scene:draw()
-    love.graphics.setColor(1, 1, 1)
-    self.camera:set()
-    BACKGROUND:setWrap("repeat", "clamp")
-    love.graphics.draw(BACKGROUND, BACKGROUND_LOOP, 0, 0, 0, 1, 1, 0, 320)
-    self.parallax_manager:drawBackground()
-    for _, animal in pairs(self.fauna) do
-        animal:draw()
-    end
+function Scene:drawPlayer()
     if self.player.position.y > -100 then
         -- draw player shadow 
         local dist = (self.player.position.y + 100) / 70
@@ -166,7 +177,7 @@ function Scene:draw()
         local size = 11 / dist
         love.graphics.stencil(function() 
             love.graphics.setShader(SHADOW_MASK)
-            self.parallax_manager:drawBackground()
+            self.parallax_manager:drawMidground()
             love.graphics.setShader()
         end, "replace", 1)
         love.graphics.setColor(0, 0, 0, opacity)
@@ -176,13 +187,41 @@ function Scene:draw()
     end
     love.graphics.setColor(1, 1, 1)
     self.player:draw()
+end
+
+function Scene:drawNestIndicator()
+    local nest_position = Vector.new(self.nest[1], self.nest[2])
+    local dist = 128
+    local dir = nest_position - self.player.position
+    if dir:magnitudeSquared() > dist ^ 2 then
+        local midpoint = (nest_position + self.player.position) / 2
+        midpoint.x = math.max(self.player.position.x - 100, math.min(self.player.position.x + 100, midpoint.x))
+        midpoint.y = math.max(self.player.position.y - 50, math.min(self.player.position.y + 50, midpoint.y))
+        local angle = math.floor((((math.atan2(dir.y, dir.x) / math.pi) + 1) * 4) + 0.5) % 8
+        local arrow = NEST_ARROWS[angle + 1]
+        love.graphics.draw(NEST_ARROW_IMAGE, arrow, midpoint.x, midpoint.y)
+    end
+end
+
+function Scene:draw()
+    love.graphics.setColor(1, 1, 1)
+    self.camera:set()
+    self.parallax_manager:drawBackground()
+    self.parallax_manager:drawMidground()
+    for _, animal in pairs(self.fauna) do
+        animal:draw()
+    end
+    self:drawPlayer()
     self.parallax_manager:drawForeground()
+    self:drawNestIndicator()
     if DEBUG then
         love.graphics.setColor(1, 1, 1)
         love.graphics.push()
         love.graphics.origin()
         love.graphics.print(tostring(self.player.position), 0, 0)
+        love.graphics.print(tostring(self.player.last_flap), 0, 16)
         love.graphics.pop()
+        love.graphics.circle("line", self.roost_spot[1], self.roost_spot[2], ROOST_DISTANCE)
         -- love.graphics.line(0, 0, self.player.position.x, self.player.position.y)
         -- love.graphics.circle("fill", self.player.position.x, self.player.position.y, 3)
         -- love.graphics.setColor(1, 0, 0)
