@@ -21,6 +21,7 @@ end
 
 function love.keypressed(key)
     if key == "escape" then love.event.quit() end
+    if key == "`" then DEBUG = not DEBUG end
 end
 
 function love.update(dt)
