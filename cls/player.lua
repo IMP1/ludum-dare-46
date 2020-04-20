@@ -75,7 +75,7 @@ function Player:update_movement(dt)
     if impulse:magnitudeSquared() > 0 then
         self:accelerate(dt, impulse:normalise())
         self.last_flap = 0
-        TUTORIAL.movement_displayed = true
+        TUTORIALS.movement.completed = true
         self.flap_animation_timer = self.flap_animation_timer + dt
         if self.flap_animation_timer >= FLAP_FREQUENCY then
             self.flap_animation_timer = self.flap_animation_timer - FLAP_FREQUENCY

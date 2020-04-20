@@ -10,19 +10,19 @@ local PIXEL_SCALE = 1
 local WIDTH, HEIGHT = love.graphics.getWidth(), love.graphics.getHeight()
 local canvas
 
-TUTORIAL = {
-    timers = {
-        movement = nil,
-        hunting = nil,
-        swooping = nil,
-        roosting = nil,
-        hunger = nil,
+TUTORIALS = {
+    movement = {
+        timer = nil,
+        completed = false,
+        message = "Use WASD or the Arrow keys to move.",
+        delay = 4,
     },
-    movement_displayed = false,
-    hunting_displayed = false,
-    swooping_displayed = false,
-    roosting_displayed = false,
-    hunger_displayed = false,
+    -- movement_displayed = false,
+    -- hunting_displayed = false,
+    -- stealth_displayed = false,
+    -- swooping_displayed = false,
+    -- roosting_displayed = false,
+    -- hunger_displayed = false,
 }
 
 -- TODO: Add prompts for gameplay aspects
@@ -33,6 +33,7 @@ TUTORIAL = {
 
 function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
+    love.graphics.setLineStyle("rough")
     local pixel_font = love.graphics.newImageFont("gfx/font.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz1234567890!?.,:;'()-", 1) 
     love.graphics.setFont(pixel_font)
     local ForestScene = require 'scn.forest'
@@ -48,9 +49,9 @@ function love.keypressed(key)
 end
 
 function love.update(dt)
-    for key, timer in pairs(TUTORIAL.timers) do
-        if timer then
-            TUTORIAL.timers[key] = timer + dt
+    for _, tutorial in pairs(TUTORIALS) do
+        if tutorial.timer then
+            tutorial.timer = tutorial.timer + dt
         end
     end
     scene_manager.update(dt)

@@ -64,8 +64,8 @@ function Scene.new()
 end
 
 function Scene:load()
+    -- TODO: Have some background music
     love.graphics.setBackgroundColor(34/255,32/255,52/255)
-    -- FOOD_IMAGE:setFilter("nearest", "nearest")
     self.camera = Camera.new()
     self.camera:scale(4)
     self.camera:setBounds(0, -500, 1920 - 240, -160)
@@ -122,7 +122,7 @@ function Scene:load()
     self.owlet_hunger = 0
     self.fledgeling_progress = 0
 
-    TUTORIAL.timers.movement = 0
+    TUTORIALS.movement.timer = 0
 end
 
 function Scene:keyPressed(key, isRepeat)
@@ -236,6 +236,8 @@ function Scene:spawnRat()
     table.insert(self.fauna, rat)
 end
 
+-- TODO: Have an intro scene? Even if just wall of text.
+
 function Scene:lose()
     -- TODO: Change scene to a game over screen (you lose!)
     error("You lose")
@@ -336,8 +338,8 @@ function Scene:draw()
     self:drawPlayer()
     self.parallax_manager:drawForeground()
     self:drawNestIndicator()
-    if TUTORIAL.timers.movement and TUTORIAL.timers.movement > 4 and not TUTORIAL.movement_displayed then
-        love.graphics.printf("Use WASD or the Arrow keys to move.", self.player.position.x - 500, self.player.position.y - 24, 1000, "center")
+    if TUTORIALS.movement.timer and TUTORIALS.movement.timer > 4 and not TUTORIALS.movement.completed then
+        love.graphics.printf(TUTORIALS.movement.message, self.player.position.x - 500, self.player.position.y - 24, 1000, "center")
     end
     if DEBUG then
         love.graphics.setColor(1, 1, 1)
