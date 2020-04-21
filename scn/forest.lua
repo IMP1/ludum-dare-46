@@ -48,7 +48,7 @@ local SPAWN_DELAY = 3
 local ROOST_DISTANCE = 32
 local SWOOP_SLOWDOWN = 4
 local HUNGER_LIMIT = 100
-local HUNGER_INCREASE_RATE = 2
+local HUNGER_INCREASE_RATE = 2.5
 local FLEDGELING_COMPLETE = 120
 local HUNGER_SATIATION_RAT = 20
 
@@ -127,6 +127,7 @@ function Scene:load()
 end
 
 function Scene:keyPressed(key, isRepeat)
+    if key == "b" then BLURRY_SHADOW = not BLURRY_SHADOW end
     if key == "t" then
         for _, t in pairs(TUTORIALS) do
             t.completed = true
@@ -312,7 +313,8 @@ end
 
 function Scene:drawPlayer()
     if self.player.position.y > -100 then
-        -- draw player shadow 
+        -- draw player shadow
+        -- TODO: make shadow smaller 
         local dist = (self.player.position.y + 100) / 70
         local x = self.player.position.x
         local y = self.player.position.y
@@ -331,7 +333,9 @@ function Scene:drawPlayer()
         if self.player.velocity.x < 0 then
             flip = -1
         end
+        if BLURRY_SHADOW then Player.IMAGE:setFilter("linear") end
         love.graphics.draw(Player.IMAGE, self.player.sprite, x, -30, 0, flip * size_long, size / dist, w/2, h/2)
+        Player.IMAGE:setFilter("nearest")
         love.graphics.setStencilTest()
     end
     love.graphics.setColor(1, 1, 1)
