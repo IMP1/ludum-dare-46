@@ -22,7 +22,8 @@ function Scene:load()
     love.graphics.setCanvas()
 end
 
-function Scene:keyPressed()
+function Scene:keyPressed(key)
+    if key == "lalt" then return end
     scene_manager.pushScene(IntroScene.new())
 end
 

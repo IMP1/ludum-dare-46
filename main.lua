@@ -4,7 +4,7 @@ function T(str)
     return str
 end
 
-DEBUG = true
+DEBUG = false
 
 local PIXEL_SCALE = 1
 local WIDTH, HEIGHT = love.graphics.getWidth(), love.graphics.getHeight()
@@ -92,7 +92,7 @@ function love.update(dt)
                 if tutorial.multi then
                     tutorial.completed = false
                     tutorial.timer = nil
-                    
+
                 end
             end
         end
