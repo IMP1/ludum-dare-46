@@ -251,8 +251,10 @@ function Scene:updatePlayer(dt)
                 animal_index = i
             end
         end
+        local in_front = (self.player.velocity.x > 0 and nearest_animal.position.x > self.player.position.x) or 
+                         (self.player.velocity.x < 0 and nearest_animal.position.x < self.player.position.x)
         if nearest_dist < Player.CATCH_DISTANCE ^ 2 and not nearest_animal.hiding and
-                self.player.swooping and not self.player.carried_prey then
+                self.player.swooping and not self.player.carried_prey and in_front then
             TUTORIALS.swooping.complete = true
             table.remove(self.fauna, animal_index)
             self.player:catch(nearest_animal)
@@ -283,6 +285,9 @@ function Scene:updatePlayer(dt)
 end
 
 function Scene:update(dt)
+    if self.player.swooping then
+        dt = dt / SWOOP_SLOWDOWN
+    end
     if TUTORIALS.movement.timer and TUTORIALS.movement.timer > TUTORIALS.movement.delay and not self.easy_mode then
         HUNGER_INCREASE_RATE = HUNGER_INCREASE_RATE / 2
         self.easy_mode = true
@@ -299,9 +304,6 @@ function Scene:update(dt)
         self:win()
     end
     self.spawn_clock = self.spawn_clock + dt
-    if self.player.swooping then
-        dt = dt / SWOOP_SLOWDOWN
-    end
     self:updatePlayer(dt)
     for _, animal in pairs(self.fauna) do
         animal:update(dt, self.player, self.hiding_spots)
@@ -314,13 +316,13 @@ end
 function Scene:drawPlayer()
     if self.player.position.y > -100 then
         -- draw player shadow
-        -- TODO: make shadow smaller 
         local dist = (self.player.position.y + 100) / 70
         local x = self.player.position.x
         local y = self.player.position.y
         local opacity = 0.5 * dist
-        local size = 1 / dist
-        local size_long = 1 / dist / dist
+        -- TODO: have shadow get (ever so slightly) bigger as owl is higher
+        local size_long = 1
+        local size = size_long * 0.7
         love.graphics.stencil(function() 
             love.graphics.setShader(SHADOW_MASK)
             self.parallax_manager:drawMidground()
@@ -334,7 +336,7 @@ function Scene:drawPlayer()
             flip = -1
         end
         if BLURRY_SHADOW then Player.IMAGE:setFilter("linear") end
-        love.graphics.draw(Player.IMAGE, self.player.sprite, x, -30, 0, flip * size_long, size / dist, w/2, h/2)
+        love.graphics.draw(Player.IMAGE, self.player.sprite, x, -30, 0, flip * size_long, size, w/2, h/2)
         Player.IMAGE:setFilter("nearest")
         love.graphics.setStencilTest()
     end
